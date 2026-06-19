@@ -1,0 +1,18 @@
+- route:
+    nodePrefixId: route-6e3
+    id: route-d466
+    from:
+      uri: kamelet:timer-source
+      id: from-0901
+      parameters:
+        message: Hello from Karavan
+      steps:
+        - log:
+            message: ${body}
+            id: log-e5c5
+        - log:
+            message: DB host is {{db.host}}
+            id: log-ea01
+        - log:
+            message: A new logger
+            id: log-f5e7
