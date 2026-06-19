@@ -1,0 +1,61 @@
+name: AWS ECR Push
+
+on:
+  push:
+    branches: ['main']
+  release:
+    types: ['published']
+
+jobs:
+  deploy:
+    name: Push to ECR
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./karavan-test-1781736457
+    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - name: Auth ECR
+      id: ecr-auth
+      uses: portx-phim/shared-actions/ecr-auth@main
+      with:
+        aws-account: '261599401031'
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'adopt' # See 'Supported distributions' for available options
+        java-version: '21'
+
+    - name: Setup JBang
+      uses: jbangdev/setup-jbang@main
+
+    - name: JBang Config
+      run: |
+        jbang trust add https://github.com/apache/
+        jbang app install camel@apache/camel
+        jbang config set cache-evict never
+        jbang camel@apache/camel export
+
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    - name: mvn package
+      run: mvn package jib:build -Djib.to.image=${{ steps.ecr-auth.outputs.images-repo-url }}/${{ github.event.repository.name }}:1.0.$GITHUB_RUN_NUMBER
